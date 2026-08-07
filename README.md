@@ -11,6 +11,7 @@ They reset whenever Railway restarts or redeploys the service.
 - `/whitelist add user`
 - `/whitelist remove user`
 - `/x-tag username`
+- `/strip-x username`
 - `/tag-history`
 - `/accept username`
 - `/group`
@@ -19,14 +20,16 @@ All commands are enabled in direct messages. The bot only accepts commands from
 the Discord user IDs in `ALLOWED_USER_IDS`, which lets you limit it to you and
 your friend.
 
-`/x-tag` records the Roblox username. When it is used inside a server, it also
-adds the configured X tag role to the person who ran the command. In a DM, it
-only records the username because Discord roles are server-specific.
+`/x-tag` finds the Roblox username, confirms that the account is in the group,
+and gives it the configured Roblox X tag role.
 
-`/accept` records the acceptance and sends the official group link. Roblox does
-not let a normal Discord bot force a person into a group without a Roblox
-account credential and additional authorization, so the person still joins
-through Roblox.
+`/strip-x` only changes a member who currently has the configured X tag role.
+It returns that account to the configured base member role. It does not remove
+people from the group.
+
+`/accept` finds the pending join request for the Roblox username and accepts it
+into the group. If the account is already a member, it reports that no change
+was needed.
 
 ## Railway variables
 
@@ -36,22 +39,37 @@ Add these variables to the Railway service:
 DISCORD_BOT_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_application_id
 ALLOWED_USER_IDS=your_discord_id,your_friends_discord_id
-X_TAG_ROLE_ID=8
+ROBLOX_COOKIE=your_.ROBLOSECURITY_cookie
+ROBLOX_GROUP_ID=396910998
+ROBLOX_X_ROLE_ID=your_roblox_x_role_id
+ROBLOX_MEMBER_ROLE_ID=1
 ```
 
-The bot token is never stored in the source code.
+`ROBLOX_X_ROLE_ID` is the recommended name for the Roblox X group role.
+`X_TAG_ROLE_ID` is also accepted as a backwards-compatible alias.
+
+`ROBLOX_COOKIE` is a sensitive credential. Store it as a Railway variable or
+Replit Secret; never put it in this ZIP, source code, or a public repository.
+The Roblox cookie is used only for the Roblox group API requests.
 
 ## Discord setup
 
 1. Create an application in the Discord Developer Portal.
 2. Create a bot and copy its token into Railway as `DISCORD_BOT_TOKEN`.
 3. Copy the application ID into `DISCORD_CLIENT_ID`.
-4. Invite the bot with the `bot` and `applications.commands` scopes.
-5. Give the bot permission to manage roles if `/x-tag` should add the role.
-6. Make sure the bot's highest role is above the X tag role.
+4. Create the Roblox group role IDs in the group settings and copy the X tag
+   role ID into `ROBLOX_X_ROLE_ID`. The base member role is normally `1`.
+5. Create a Roblox API credential/session with permission to manage group
+   members, then store the `.ROBLOSECURITY` value as `ROBLOX_COOKIE`.
+6. Invite the Discord bot with the `bot` and `applications.commands` scopes.
 
 Commands are registered globally. Discord can take a while to show global
 command changes after the first deploy.
+
+The current Roblox endpoints require the account represented by the cookie to
+have permission to manage group members and accept join requests. Roblox
+recommends Open Cloud API keys or OAuth for production instead of cookies; this
+bot uses `ROBLOX_COOKIE` because that is the requested setup.
 
 ## Run locally
 

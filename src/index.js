@@ -19,6 +19,11 @@ import {
   parseUserId,
   reply,
 } from "./replies.js";
+import {
+  acceptJoinRequest,
+  giveXTag,
+  stripXTag,
+} from "./roblox.js";
 
 const commands = commandDefinitions.map((command) => command.toJSON());
 
@@ -38,22 +43,6 @@ async function registerCommands() {
   });
 
   console.log("Global slash commands registered.");
-}
-
-async function addRoleInServer(interaction) {
-  if (!interaction.inGuild()) {
-    return "This was run in a DM, so there is no server role to add.";
-  }
-
-  const member = await interaction.guild.members.fetch(interaction.user.id);
-  const role = await interaction.guild.roles.fetch(config.xTagRoleId);
-
-  if (!role) {
-    return `I could not find the X tag role with ID ${config.xTagRoleId}.`;
-  }
-
-  await member.roles.add(role);
-  return `The X tag role was added to <@${interaction.user.id}>.`;
 }
 
 client.once("ready", () => {
@@ -119,13 +108,28 @@ client.on("interactionCreate", async (interaction) => {
       const username = cleanUsername(
         interaction.options.getString("username", true),
       );
+      const result = await giveXTag(username);
       await addTag(username, interaction.user.id);
-      const roleMessage = await addRoleInServer(interaction);
 
       await interaction.reply(
         reply(
           "X tag added",
-          `Roblox username: **${username}**\n\n${roleMessage}`,
+          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
+        ),
+      );
+      return;
+    }
+
+    if (interaction.commandName === "strip-x") {
+      const username = cleanUsername(
+        interaction.options.getString("username", true),
+      );
+      const result = await stripXTag(username);
+
+      await interaction.reply(
+        reply(
+          result.changed ? "X tag removed" : "No change needed",
+          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
         ),
       );
       return;
@@ -152,12 +156,13 @@ client.on("interactionCreate", async (interaction) => {
       const username = cleanUsername(
         interaction.options.getString("username", true),
       );
+      const result = await acceptJoinRequest(username);
       await acceptTag(username, interaction.user.id);
 
       await interaction.reply(
         reply(
-          "Acceptance recorded",
-          `**${username}** was marked as accepted. Open the Roblox group link below to join:\n\n${config.groupUrl}`,
+          result.changed ? "Accepted into Roblox group" : "Already accepted",
+          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
         ),
       );
       return;

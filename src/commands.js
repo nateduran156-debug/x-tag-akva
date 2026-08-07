@@ -27,7 +27,18 @@ export const commandDefinitions = [
   dmEnabled(
     new SlashCommandBuilder()
       .setName("x-tag")
-      .setDescription("Log a Roblox username and apply the X tag role in a server.")
+      .setDescription("Give a Roblox group member the X tag role.")
+      .addStringOption((option) =>
+        option
+          .setName("username")
+          .setDescription("The Roblox username.")
+          .setRequired(true),
+      ),
+  ),
+  dmEnabled(
+    new SlashCommandBuilder()
+      .setName("strip-x")
+      .setDescription("Remove the X tag role from a Roblox group member.")
       .addStringOption((option) =>
         option
           .setName("username")
@@ -43,7 +54,7 @@ export const commandDefinitions = [
   dmEnabled(
     new SlashCommandBuilder()
       .setName("accept")
-      .setDescription("Accept a Roblox username into the group.")
+      .setDescription("Accept a pending Roblox group join request.")
       .addStringOption((option) =>
         option
           .setName("username")
