@@ -1,4 +1,4 @@
-const required = (name) => {
+function required(name) {
   const value = process.env[name]?.trim();
 
   if (!value) {
@@ -6,7 +6,7 @@ const required = (name) => {
   }
 
   return value;
-};
+}
 
 const allowedUserIds = required("ALLOWED_USER_IDS")
   .split(",")
@@ -21,7 +21,7 @@ export const config = {
   botToken: required("DISCORD_BOT_TOKEN"),
   clientId: required("DISCORD_CLIENT_ID"),
   allowedUserIds,
-  robloxCookie: process.env.ROBLOX_COOKIE?.trim() || "",
+  robloxCookie: process.env.ROBLOX_COOKIE?.trim(),
   robloxGroupId: process.env.ROBLOX_GROUP_ID?.trim() || "396910998",
   robloxXRoleId:
     process.env.ROBLOX_X_ROLE_ID?.trim() ||

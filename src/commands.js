@@ -1,9 +1,25 @@
-import { SlashCommandBuilder } from "discord.js";
+import {
+  ApplicationIntegrationType,
+  InteractionContextType,
+  SlashCommandBuilder,
+} from "discord.js";
 
-const dmEnabled = (command) => command.setDMPermission(true);
+function availableEverywhere(command) {
+  return command
+    .setDMPermission(true)
+    .setIntegrationTypes(
+      ApplicationIntegrationType.GuildInstall,
+      ApplicationIntegrationType.UserInstall,
+    )
+    .setContexts(
+      InteractionContextType.Guild,
+      InteractionContextType.BotDM,
+      InteractionContextType.PrivateChannel,
+    );
+}
 
 export const commandDefinitions = [
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("whitelist")
       .setDescription("Add or remove a Discord user from the whitelist.")
@@ -24,7 +40,7 @@ export const commandDefinitions = [
           .setRequired(true),
       ),
   ),
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("x-tag")
       .setDescription("Give a Roblox group member the X tag role.")
@@ -35,7 +51,7 @@ export const commandDefinitions = [
           .setRequired(true),
       ),
   ),
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("strip-x")
       .setDescription("Remove the X tag role from a Roblox group member.")
@@ -46,12 +62,12 @@ export const commandDefinitions = [
           .setRequired(true),
       ),
   ),
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("tag-history")
       .setDescription("Show the latest X tag history."),
   ),
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("accept")
       .setDescription("Accept a pending Roblox group join request.")
@@ -62,7 +78,7 @@ export const commandDefinitions = [
           .setRequired(true),
       ),
   ),
-  dmEnabled(
+  availableEverywhere(
     new SlashCommandBuilder()
       .setName("group")
       .setDescription("Send the Roblox group link."),

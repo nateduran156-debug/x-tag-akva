@@ -42,7 +42,7 @@ async function registerCommands() {
     body: commands,
   });
 
-  console.log("Global slash commands registered.");
+  console.log("Slash commands registered.");
 }
 
 client.once("ready", () => {
@@ -55,11 +55,10 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (!isAllowed(interaction.user.id)) {
-    await interaction.reply(
-      reply("Not allowed", "This bot is limited to the users in ALLOWED_USER_IDS.", {
-        ephemeral: true,
-      }),
-    );
+    await interaction.reply(reply(
+      "Not allowed",
+      "Add your Discord user ID to ALLOWED_USER_IDS before using this bot.",
+    ));
     return;
   }
 
@@ -111,12 +110,10 @@ client.on("interactionCreate", async (interaction) => {
       const result = await giveXTag(username);
       await addTag(username, interaction.user.id);
 
-      await interaction.reply(
-        reply(
-          "X tag added",
-          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
-        ),
-      );
+      await interaction.reply(reply(
+        "X tag added",
+        `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
+      ));
       return;
     }
 
@@ -126,12 +123,10 @@ client.on("interactionCreate", async (interaction) => {
       );
       const result = await stripXTag(username);
 
-      await interaction.reply(
-        reply(
-          result.changed ? "X tag removed" : "No change needed",
-          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
-        ),
-      );
+      await interaction.reply(reply(
+        result.changed ? "X tag removed" : "No change needed",
+        `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
+      ));
       return;
     }
 
@@ -159,12 +154,10 @@ client.on("interactionCreate", async (interaction) => {
       const result = await acceptJoinRequest(username);
       await acceptTag(username, interaction.user.id);
 
-      await interaction.reply(
-        reply(
-          result.changed ? "Accepted into Roblox group" : "Already accepted",
-          `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
-        ),
-      );
+      await interaction.reply(reply(
+        result.changed ? "Accepted into Roblox group" : "Already accepted",
+        `Roblox username: **${result.user.name}**\n\n${result.user.name} ${result.message}.`,
+      ));
       return;
     }
 

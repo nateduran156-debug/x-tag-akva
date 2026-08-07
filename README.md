@@ -16,9 +16,9 @@ They reset whenever Railway restarts or redeploys the service.
 - `/accept username`
 - `/group`
 
-All commands are enabled in direct messages. The bot only accepts commands from
-the Discord user IDs in `ALLOWED_USER_IDS`, which lets you limit it to you and
-your friend.
+All commands are available in servers, normal DMs, and group DMs. The bot only
+accepts commands from the Discord user IDs in `ALLOWED_USER_IDS`, which lets you
+limit it to you and your friend.
 
 `/x-tag` finds the Roblox username, confirms that the account is in the group,
 and gives it the configured Roblox X tag role.
@@ -62,9 +62,19 @@ The Roblox cookie is used only for the Roblox group API requests.
 5. Create a Roblox API credential/session with permission to manage group
    members, then store the `.ROBLOSECURITY` value as `ROBLOX_COOKIE`.
 6. Invite the Discord bot with the `bot` and `applications.commands` scopes.
+7. If your friend is using the bot in a private DM, install the app for their
+   Discord account as well. In Discord, open the bot's profile, choose **Add
+   App**, and allow the app to access your account. This is required for
+   user-installed commands to appear in private or group DMs.
 
-Commands are registered globally. Discord can take a while to show global
-command changes after the first deploy.
+Commands are registered globally with both server-install and user-install
+contexts. Discord can take a short time to refresh global command changes after
+the bot restarts. Make sure `ALLOWED_USER_IDS` contains both IDs, with no `@`
+symbols:
+
+```text
+ALLOWED_USER_IDS=your_discord_id,your_friends_discord_id
+```
 
 The current Roblox endpoints require the account represented by the cookie to
 have permission to manage group members and accept join requests. Roblox

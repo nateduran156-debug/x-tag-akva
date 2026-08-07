@@ -1,12 +1,10 @@
 import { config } from "./config.js";
 
-const ROBLOX_API = "https://www.roblox.com";
-const GROUPS_API = "https://groups.roblox.com";
-const USERS_API = "https://users.roblox.com";
+const groupsApi = "https://groups.roblox.com";
+const usersApi = "https://users.roblox.com";
+let csrfToken;
 
-let csrfToken = "";
-
-function requireRobloxConfig() {
+function checkConfig() {
   if (!config.robloxCookie) {
     throw new Error("ROBLOX_COOKIE is not configured.");
   }
@@ -16,19 +14,18 @@ function requireRobloxConfig() {
   }
 }
 
-function cookieHeader() {
-  const cookie = config.robloxCookie.replace(/^\.ROBLOSECURITY=/, "");
-  return `.ROBLOSECURITY=${cookie}`;
+function cookieValue() {
+  return config.robloxCookie.replace(/^\.ROBLOSECURITY=/, "");
 }
 
-async function robloxFetch(url, options = {}, retry = true) {
-  requireRobloxConfig();
+async function request(url, options = {}, retry = true) {
+  checkConfig();
 
   const headers = new Headers(options.headers);
-  headers.set("Cookie", cookieHeader());
   headers.set("Accept", "application/json");
+  headers.set("Cookie", `.ROBLOSECURITY=${cookieValue()}`);
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -39,30 +36,24 @@ async function robloxFetch(url, options = {}, retry = true) {
   const response = await fetch(url, { ...options, headers });
 
   if (response.status === 403 && retry) {
-    const nextCsrfToken = response.headers.get("x-csrf-token");
+    const token = response.headers.get("x-csrf-token");
 
-    if (nextCsrfToken) {
-      csrfToken = nextCsrfToken;
-      return robloxFetch(url, options, false);
+    if (token) {
+      csrfToken = token;
+      return request(url, options, false);
     }
   }
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Roblox request failed (${response.status} ${response.statusText}): ${body.slice(0, 500)}`,
-    );
+    const message = await response.text();
+    throw new Error(`Roblox returned ${response.status}: ${message.slice(0, 400)}`);
   }
 
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+  return response.status === 204 ? null : response.json();
 }
 
-export async function findUser(username) {
-  const result = await robloxFetch(`${USERS_API}/v1/usernames/users`, {
+async function getUser(username) {
+  const response = await request(`${usersApi}/v1/usernames/users`, {
     method: "POST",
     body: JSON.stringify({
       usernames: [username],
@@ -70,33 +61,28 @@ export async function findUser(username) {
     }),
   });
 
-  const user = result.data?.[0];
+  const user = response.data?.[0];
 
   if (!user) {
     throw new Error(`Roblox user "${username}" was not found.`);
   }
 
-  return {
-    id: String(user.id),
-    name: user.name,
-    displayName: user.displayName,
-  };
+  return { id: String(user.id), name: user.name };
 }
 
-async function getGroupMembership(userId) {
-  const result = await robloxFetch(
-    `${GROUPS_API}/v2/users/${userId}/groups/roles`,
-    { method: "GET" },
+async function getMembership(userId) {
+  const response = await request(
+    `${groupsApi}/v2/users/${userId}/groups/roles`,
   );
 
-  return result.data?.find(
-    (membership) => String(membership.group?.id) === String(config.robloxGroupId),
+  return response.data?.find(
+    (item) => String(item.group?.id) === String(config.robloxGroupId),
   );
 }
 
-async function updateGroupRole(userId, roleId) {
-  await robloxFetch(
-    `${GROUPS_API}/v1/groups/${config.robloxGroupId}/users/${userId}`,
+async function setRole(userId, roleId) {
+  await request(
+    `${groupsApi}/v1/groups/${config.robloxGroupId}/users/${userId}`,
     {
       method: "PATCH",
       body: JSON.stringify({ roleId: Number(roleId) }),
@@ -105,8 +91,8 @@ async function updateGroupRole(userId, roleId) {
 }
 
 export async function giveXTag(username) {
-  const user = await findUser(username);
-  const membership = await getGroupMembership(user.id);
+  const user = await getUser(username);
+  const membership = await getMembership(user.id);
 
   if (!membership) {
     throw new Error(`${user.name} is not a member of the Roblox group.`);
@@ -116,75 +102,82 @@ export async function giveXTag(username) {
     return { user, changed: false, message: "already has the X tag role" };
   }
 
-  await updateGroupRole(user.id, config.robloxXRoleId);
+  await setRole(user.id, config.robloxXRoleId);
   return { user, changed: true, message: "was given the X tag role" };
 }
 
 export async function stripXTag(username) {
-  const user = await findUser(username);
-  const membership = await getGroupMembership(user.id);
+  const user = await getUser(username);
+  const membership = await getMembership(user.id);
 
   if (!membership) {
     throw new Error(`${user.name} is not a member of the Roblox group.`);
   }
 
   if (String(membership.role?.id) !== String(config.robloxXRoleId)) {
-    return { user, changed: false, message: "does not currently have the X tag role" };
+    return {
+      user,
+      changed: false,
+      message: "does not currently have the X tag role",
+    };
   }
 
-  await updateGroupRole(user.id, config.robloxMemberRoleId);
-  return { user, changed: true, message: "was returned to the base member role" };
+  await setRole(user.id, config.robloxMemberRoleId);
+  return {
+    user,
+    changed: true,
+    message: "was returned to the base member role",
+  };
 }
 
 async function findJoinRequest(username) {
   let cursor;
 
   do {
-    const query = new URLSearchParams({
+    const params = new URLSearchParams({
       sortOrder: "Asc",
       limit: "100",
     });
 
     if (cursor) {
-      query.set("cursor", cursor);
+      params.set("cursor", cursor);
     }
 
-    const result = await robloxFetch(
-      `${GROUPS_API}/v1/groups/${config.robloxGroupId}/join-requests?${query}`,
-      { method: "GET" },
+    const response = await request(
+      `${groupsApi}/v1/groups/${config.robloxGroupId}/join-requests?${params}`,
     );
 
-    const match = result.data?.find(
-      (request) =>
-        request.requester?.username?.toLowerCase() === username.toLowerCase(),
+    const requestForUser = response.data?.find(
+      (item) =>
+        item.requester?.username?.toLowerCase() === username.toLowerCase(),
     );
 
-    if (match) {
-      return match;
+    if (requestForUser) {
+      return requestForUser;
     }
 
-    cursor = result.nextPageCursor;
+    cursor = response.nextPageCursor;
   } while (cursor);
 
   return null;
 }
 
 export async function acceptJoinRequest(username) {
-  const user = await findUser(username);
-  const membership = await getGroupMembership(user.id);
+  const user = await getUser(username);
+  const membership = await getMembership(user.id);
 
   if (membership) {
     return { user, changed: false, message: "is already in the Roblox group" };
   }
 
-  const request = await findJoinRequest(user.name);
+  const joinRequest = await findJoinRequest(user.name);
 
-  if (!request) {
+  if (!joinRequest) {
     throw new Error(`${user.name} does not have a pending group join request.`);
   }
 
-  await robloxFetch(
-    `${GROUPS_API}/v1/groups/${config.robloxGroupId}/join-requests/users/${user.id}`,
+  await request(
+    `${groupsApi}/v1/groups/${config.robloxGroupId}/join-requests/users/${user.id}`,
     { method: "POST", body: JSON.stringify({}) },
   );
 
