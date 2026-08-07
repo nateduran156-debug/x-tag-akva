@@ -1,0 +1,16 @@
+{
+  "name": "xvx-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small Discord Components V2 bot for whitelist and Roblox group commands.",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "discord.js": "^14.19.3"
+  }
+}
