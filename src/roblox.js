@@ -4,13 +4,17 @@ const groupsApi = "https://groups.roblox.com";
 const usersApi = "https://users.roblox.com";
 let csrfToken;
 
-function checkConfig() {
+function checkAuthConfig() {
   if (!config.robloxCookie) {
     throw new Error("ROBLOX_COOKIE is not configured.");
   }
+}
 
+function requireXRole() {
   if (!config.robloxXRoleId) {
-    throw new Error("ROBLOX_X_ROLE_ID is not configured.");
+    throw new Error(
+      "ROBLOX_X_ROLE_ID is not configured. Set it to the Roblox X tag role ID.",
+    );
   }
 }
 
@@ -19,7 +23,7 @@ function cookieValue() {
 }
 
 async function request(url, options = {}, retry = true) {
-  checkConfig();
+  checkAuthConfig();
 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
@@ -81,16 +85,23 @@ async function getMembership(userId) {
 }
 
 async function setRole(userId, roleId) {
+  const numericRoleId = Number(roleId);
+
+  if (!Number.isSafeInteger(numericRoleId) || numericRoleId <= 0) {
+    throw new Error(`Invalid Roblox role ID: ${roleId}`);
+  }
+
   await request(
     `${groupsApi}/v1/groups/${config.robloxGroupId}/users/${userId}`,
     {
       method: "PATCH",
-      body: JSON.stringify({ roleId: Number(roleId) }),
+      body: JSON.stringify({ roleId: numericRoleId }),
     },
   );
 }
 
 export async function giveXTag(username) {
+  requireXRole();
   const user = await getUser(username);
   const membership = await getMembership(user.id);
 
@@ -107,6 +118,7 @@ export async function giveXTag(username) {
 }
 
 export async function stripXTag(username) {
+  requireXRole();
   const user = await getUser(username);
   const membership = await getMembership(user.id);
 

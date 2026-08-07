@@ -24,7 +24,7 @@ export function cleanUsername(value) {
 }
 
 export function parseUserId(value) {
-  const cleaned = value.trim();
+  const cleaned = value.trim().replace(/^@/, "");
   const mention = cleaned.match(/^<@!?(\d+)>$/);
 
   if (mention) {
